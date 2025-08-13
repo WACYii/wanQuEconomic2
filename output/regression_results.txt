@@ -1,5 +1,5 @@
 ====================================================================================================
-GBA_time_series_2014_2019
+九市-时间序列（2014-2019）
 ----------------------------------------------------------------------------------------------------
                             OLS Regression Results                            
 ==============================================================================
@@ -7,7 +7,7 @@ Dep. Variable:        ln_emission_gba   R-squared:                       1.000
 Model:                            OLS   Adj. R-squared:                    nan
 Method:                 Least Squares   F-statistic:                 4.344e+24
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):                nan
-Time:                        14:02:38   Log-Likelihood:                 164.72
+Time:                        14:23:53   Log-Likelihood:                 164.72
 No. Observations:                   6   AIC:                            -317.4
 Df Residuals:                       0   BIC:                            -318.7
 Df Model:                           5                                         
@@ -34,19 +34,19 @@ Notes:
 strong multicollinearity or other numerical problems.
 
 ====================================================================================================
-Guangdong_time_series_2014_2021
+广东-时间序列（2014-2021）
 ----------------------------------------------------------------------------------------------------
-                              OLS Regression Results                             
-=================================================================================
-Dep. Variable:     ln_emission_guangdong   R-squared:                       0.937
-Model:                               OLS   Adj. R-squared:                  0.780
-Method:                    Least Squares   F-statistic:                     120.9
-Date:                   Wed, 13 Aug 2025   Prob (F-statistic):            0.00823
-Time:                           14:02:38   Log-Likelihood:                 18.854
-No. Observations:                      8   AIC:                            -25.71
-Df Residuals:                          2   BIC:                            -25.23
-Df Model:                              5                                         
-Covariance Type:                     HAC                                         
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:         ln_emission_gd   R-squared:                       0.937
+Model:                            OLS   Adj. R-squared:                  0.780
+Method:                 Least Squares   F-statistic:                     120.9
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):            0.00823
+Time:                        14:23:53   Log-Likelihood:                 18.854
+No. Observations:                   8   AIC:                            -25.71
+Df Residuals:                       2   BIC:                            -25.23
+Df Model:                           5                                         
+Covariance Type:                  HAC                                         
 ====================================================================================
                        coef    std err          z      P>|z|      [0.025      0.975]
 ------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ Notes:
 [1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 1 lags and without small sample correction
 
 ====================================================================================================
-City_FE_panel_2014_2019
+九市-城市固定效应（2014-2019）
 ----------------------------------------------------------------------------------------------------
                             OLS Regression Results                            
 ==============================================================================
@@ -75,7 +75,7 @@ Dep. Variable:       ln_emission_city   R-squared:                       0.975
 Model:                            OLS   Adj. R-squared:                  0.966
 Method:                 Least Squares   F-statistic:                -4.205e+12
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):               1.00
-Time:                        14:02:38   Log-Likelihood:                 37.041
+Time:                        14:23:53   Log-Likelihood:                 37.041
 No. Observations:                  47   AIC:                            -46.08
 Df Residuals:                      33   BIC:                            -20.18
 Df Model:                          13                                         
@@ -88,14 +88,14 @@ ln_pv_gw            -0.3423      1.389     -0.246      0.805      -3.065       2
 ln_wind_gw          -0.7461      0.271     -2.753      0.006      -1.277      -0.215
 ln_nev_10k_units    -0.1014      0.102     -0.991      0.322      -0.302       0.099
 ln_storage_mw        0.5609      0.626      0.897      0.370      -0.665       1.787
-city_广东中山           -1.8109      0.089    -20.318      0.000      -1.986      -1.636
-city_广东佛山           -0.4230      0.130     -3.244      0.001      -0.679      -0.167
-city_广东广州            0.6071      0.077      7.879      0.000       0.456       0.758
-city_广东惠州           -0.7853      0.141     -5.567      0.000      -1.062      -0.509
-city_广东江门           -0.9340      0.111     -8.440      0.000      -1.151      -0.717
-city_广东深圳           -0.5472      0.162     -3.383      0.001      -0.864      -0.230
-city_广东珠海           -1.2466      0.121    -10.313      0.000      -1.484      -1.010
-city_广东肇庆           -1.1180      0.121     -9.263      0.000      -1.355      -0.881
+city_中山             -1.8109      0.089    -20.318      0.000      -1.986      -1.636
+city_佛山             -0.4230      0.130     -3.244      0.001      -0.679      -0.167
+city_广州              0.6071      0.077      7.879      0.000       0.456       0.758
+city_惠州             -0.7853      0.141     -5.567      0.000      -1.062      -0.509
+city_江门             -0.9340      0.111     -8.440      0.000      -1.151      -0.717
+city_深圳             -0.5472      0.162     -3.383      0.001      -0.864      -0.230
+city_珠海             -1.2466      0.121    -10.313      0.000      -1.484      -1.010
+city_肇庆             -1.1180      0.121     -9.263      0.000      -1.355      -0.881
 trend               -0.0011      0.004     -0.296      0.767      -0.008       0.006
 ==============================================================================
 Omnibus:                        4.020   Durbin-Watson:                   1.625
