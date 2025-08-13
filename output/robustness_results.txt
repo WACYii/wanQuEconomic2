@@ -7,7 +7,7 @@ Dep. Variable:        ln_emission_gba   R-squared:                       0.992
 Model:                            OLS   Adj. R-squared:                  0.962
 Method:                 Least Squares   F-statistic:                     4573.
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):             0.0111
-Time:                        18:36:05   Log-Likelihood:                 14.109
+Time:                        18:38:34   Log-Likelihood:                 14.109
 No. Observations:                   6   AIC:                            -18.22
 Df Residuals:                       1   BIC:                            -19.26
 Df Model:                           4                                         
@@ -41,7 +41,7 @@ Dep. Variable:                      y   R-squared:                       1.000
 Model:                            OLS   Adj. R-squared:                    nan
 Method:                 Least Squares   F-statistic:                 4.598e+28
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):                nan
-Time:                        18:36:05   Log-Likelihood:                 157.04
+Time:                        18:38:34   Log-Likelihood:                 157.04
 No. Observations:                   5   AIC:                            -304.1
 Df Residuals:                       0   BIC:                            -306.0
 Df Model:                           4                                         
@@ -73,7 +73,7 @@ Dep. Variable:        ln_emission_gba   R-squared:                       1.000
 Model:                            OLS   Adj. R-squared:                    nan
 Method:                 Least Squares   F-statistic:                 5.673e+27
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):                nan
-Time:                        18:36:05   Log-Likelihood:                 143.09
+Time:                        18:38:34   Log-Likelihood:                 143.09
 No. Observations:                   5   AIC:                            -276.2
 Df Residuals:                       0   BIC:                            -278.1
 Df Model:                           4                                         
@@ -107,7 +107,7 @@ Dep. Variable:         ln_emission_gd   R-squared:                       0.927
 Model:                            OLS   Adj. R-squared:                  0.830
 Method:                 Least Squares   F-statistic:                     50.45
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):            0.00439
-Time:                        18:36:05   Log-Likelihood:                 18.249
+Time:                        18:38:34   Log-Likelihood:                 18.249
 No. Observations:                   8   AIC:                            -26.50
 Df Residuals:                       3   BIC:                            -26.10
 Df Model:                           4                                         
@@ -139,7 +139,7 @@ Dep. Variable:                      y   R-squared:                       0.474
 Model:                            OLS   Adj. R-squared:                 -0.579
 Method:                 Least Squares   F-statistic:                     13.42
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):             0.0705
-Time:                        18:36:05   Log-Likelihood:                 13.257
+Time:                        18:38:34   Log-Likelihood:                 13.257
 No. Observations:                   7   AIC:                            -16.51
 Df Residuals:                       2   BIC:                            -16.79
 Df Model:                           4                                         
@@ -171,7 +171,7 @@ Dep. Variable:         ln_emission_gd   R-squared:                       0.985
 Model:                            OLS   Adj. R-squared:                  0.910
 Method:                 Least Squares   F-statistic:                     524.0
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):             0.0332
-Time:                        18:36:05   Log-Likelihood:                 21.554
+Time:                        18:38:34   Log-Likelihood:                 21.554
 No. Observations:                   7   AIC:                            -31.11
 Df Residuals:                       1   BIC:                            -31.43
 Df Model:                           5                                         
@@ -204,7 +204,7 @@ Dep. Variable:       ln_emission_city   R-squared:                       0.975
 Model:                            OLS   Adj. R-squared:                  0.966
 Method:                 Least Squares   F-statistic:                     501.5
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):           9.58e-07
-Time:                        18:36:05   Log-Likelihood:                 37.016
+Time:                        18:38:34   Log-Likelihood:                 37.016
 No. Observations:                  47   AIC:                            -46.03
 Df Residuals:                      33   BIC:                            -20.13
 Df Model:                          13                                         

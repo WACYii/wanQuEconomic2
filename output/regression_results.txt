@@ -7,7 +7,7 @@ Dep. Variable:        ln_emission_gba   R-squared:                       1.000
 Model:                            OLS   Adj. R-squared:                    nan
 Method:                 Least Squares   F-statistic:                 4.344e+24
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):                nan
-Time:                        18:36:03   Log-Likelihood:                 164.72
+Time:                        18:38:32   Log-Likelihood:                 164.72
 No. Observations:                   6   AIC:                            -317.4
 Df Residuals:                       0   BIC:                            -318.7
 Df Model:                           5                                         
@@ -42,7 +42,7 @@ Dep. Variable:         ln_emission_gd   R-squared:                       0.937
 Model:                            OLS   Adj. R-squared:                  0.780
 Method:                 Least Squares   F-statistic:                     120.9
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):            0.00823
-Time:                        18:36:03   Log-Likelihood:                 18.854
+Time:                        18:38:32   Log-Likelihood:                 18.854
 No. Observations:                   8   AIC:                            -25.71
 Df Residuals:                       2   BIC:                            -25.23
 Df Model:                           5                                         
@@ -75,7 +75,7 @@ Dep. Variable:       ln_emission_city   R-squared:                       0.975
 Model:                            OLS   Adj. R-squared:                  0.966
 Method:                 Least Squares   F-statistic:                -4.205e+12
 Date:                Wed, 13 Aug 2025   Prob (F-statistic):               1.00
-Time:                        18:36:03   Log-Likelihood:                 37.041
+Time:                        18:38:32   Log-Likelihood:                 37.041
 No. Observations:                  47   AIC:                            -46.08
 Df Residuals:                      33   BIC:                            -20.18
 Df Model:                          13                                         

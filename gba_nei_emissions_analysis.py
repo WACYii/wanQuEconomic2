@@ -503,6 +503,129 @@ def robustness_checks(merged_gba: pd.DataFrame, merged_gd: pd.DataFrame, panel_m
     return outs
 
 
+def plot_elasticity_bars(outputs: List[Tuple[str, sm.regression.linear_model.RegressionResultsWrapper]], out_prefix: str = "图_弹性_") -> None:
+    """对数-对数模型的弹性（ln_X 的系数）可视化：
+    - 为每个模型绘制条形图，误差条为95%置信区间
+    - 额外生成跨模型对比的分组条形图（若>=2个模型）
+    """
+    ensure_chinese_font()
+    # 汇总
+    records = []
+    for name, res in outputs:
+        conf = res.conf_int()
+        for var in res.params.index:
+            if var.startswith("ln_"):
+                beta = float(res.params[var])
+                lo = float(conf.loc[var, 0])
+                hi = float(conf.loc[var, 1])
+                records.append({"模型": name, "变量": var, "弹性": beta, "lo": lo, "hi": hi})
+    if not records:
+        return
+    import pandas as pd
+    df = pd.DataFrame(records)
+
+    # 每个模型一张图
+    for name, sub in df.groupby("模型"):
+        order = sub.sort_values("弹性", ascending=False)["变量"]
+        yerr = [sub.set_index("变量").loc[v, "弹性"] - sub.set_index("变量").loc[v, "lo"] for v in order]
+        yerr2 = [sub.set_index("变量").loc[v, "hi"] - sub.set_index("变量").loc[v, "弹性"] for v in order]
+        plt.figure(figsize=(7, 4.5))
+        plt.bar(order, sub.set_index("变量").loc[order, "弹性"], color="#1abc9c", yerr=[yerr, yerr2], capsize=4)
+        plt.axhline(0, color="#7f8c8d", lw=1)
+        plt.ylabel("弹性（ln-ln系数）")
+        plt.xticks(rotation=20)
+        plt.title(f"{name}：对数-对数模型弹性")
+        plt.tight_layout()
+        plt.savefig(OUTPUT_DIR / f"{out_prefix}{name}.png", dpi=200)
+        plt.close()
+
+    # 跨模型对比：以变量为x轴，模型为色彩
+    if df["模型"].nunique() >= 2:
+        pivot = df.pivot_table(index="变量", columns="模型", values="弹性")
+        pivot = pivot.loc[[v for v in pivot.index if v.startswith("ln_")]]
+        pivot = pivot.sort_index()
+        ax = pivot.plot(kind="bar", figsize=(9, 5))
+        plt.axhline(0, color="#7f8c8d", lw=1)
+        plt.ylabel("弹性（ln-ln系数）")
+        plt.title("不同模型下的弹性对比")
+        plt.xticks(rotation=20)
+        plt.tight_layout()
+        plt.savefig(OUTPUT_DIR / f"{out_prefix}对比.png", dpi=200)
+        plt.close()
+
+
+def first_difference(df: pd.DataFrame, y: str, x_vars: List[str], group_col: Optional[str] = None) -> pd.DataFrame:
+    d = df.copy().sort_values([group_col, "year"]) if group_col else df.copy().sort_values("year")
+    for col in [y] + x_vars:
+        d[f"d_{col}"] = d.groupby(group_col)[col].diff() if group_col else d[col].diff()
+    if group_col:
+        keep_cols = [group_col, "year"] + [f"d_{y}"] + [f"d_{x}" for x in x_vars]
+    else:
+        keep_cols = ["year"] + [f"d_{y}"] + [f"d_{x}" for x in x_vars]
+    return d[keep_cols].dropna().reset_index(drop=True)
+
+
+def add_year_dummies(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
+    year_d = pd.get_dummies(df["year"].astype(int), prefix="year", drop_first=True)
+    return pd.concat([df, year_d], axis=1), list(year_d.columns)
+
+
+def robustness_checks(merged_gba: pd.DataFrame, merged_gd: pd.DataFrame, panel_merged: pd.DataFrame) -> List[Tuple[str, sm.regression.linear_model.RegressionResultsWrapper]]:
+    outs: List[Tuple[str, sm.regression.linear_model.RegressionResultsWrapper]] = []
+
+    # -- 九市时间序列：无趋势、差分、滞后 --
+    if len(merged_gba) >= 5:
+        d = merged_gba.copy().sort_values("year")
+        d["ln_emission_gba"] = safe_log(d["emission_gba"])
+        for v in ["pv_gw", "wind_gw", "nev_10k_units", "storage_mw"]:
+            d[f"ln_{v}"] = safe_log(d[v])
+        xvars = ["ln_pv_gw", "ln_wind_gw", "ln_nev_10k_units", "ln_storage_mw"]
+        # 无趋势
+        outs.append(("九市-无趋势（2014-2019）", fit_time_series_ols(d, "ln_emission_gba", xvars, trend=False)))
+        # 差分
+        fd = first_difference(d, "ln_emission_gba", xvars)
+        if len(fd) >= 4:
+            outs.append(("九市-一阶差分（2014-2019）", fit_time_series_ols(fd.rename(columns={"d_ln_emission_gba": "y"}), "y", [f"d_{x}" for x in xvars], trend=False)))
+        # 滞后X
+        d_lag = d.copy()
+        for v in xvars:
+            d_lag[v + "_lag1"] = d_lag[v].shift(1)
+        d_lag = d_lag.dropna().reset_index(drop=True)
+        if len(d_lag) >= 5:
+            outs.append(("九市-滞后解释变量（t-1）", fit_time_series_ols(d_lag, "ln_emission_gba", [v + "_lag1" for v in xvars], trend=True)))
+
+    # -- 广东时间序列：无趋势、差分、滞后 --
+    if len(merged_gd) >= 6:
+        d = merged_gd.copy().sort_values("year")
+        d["ln_emission_gd"] = safe_log(d["emission_guangdong"])
+        for v in ["pv_gw", "wind_gw", "nev_10k_units", "storage_mw"]:
+            d[f"ln_{v}"] = safe_log(d[v])
+        xvars = ["ln_pv_gw", "ln_wind_gw", "ln_nev_10k_units", "ln_storage_mw"]
+        outs.append(("广东-无趋势（2014-2021）", fit_time_series_ols(d, "ln_emission_gd", xvars, trend=False)))
+        fd = first_difference(d, "ln_emission_gd", xvars)
+        if len(fd) >= 5:
+            outs.append(("广东-一阶差分（2014-2021）", fit_time_series_ols(fd.rename(columns={"d_ln_emission_gd": "y"}), "y", [f"d_{x}" for x in xvars], trend=False)))
+        d_lag = d.copy()
+        for v in xvars:
+            d_lag[v + "_lag1"] = d_lag[v].shift(1)
+        d_lag = d_lag.dropna().reset_index(drop=True)
+        if len(d_lag) >= 6:
+            outs.append(("广东-滞后解释变量（t-1）", fit_time_series_ols(d_lag, "ln_emission_gd", [v + "_lag1" for v in xvars], trend=True)))
+
+    # -- 面板：年虚拟变量替代趋势 --
+    if len(panel_merged) >= 30:
+        d = panel_merged.copy()
+        d["ln_emission_city"] = safe_log(d["emission"])
+        for v in ["pv_gw", "wind_gw", "nev_10k_units", "storage_mw"]:
+            d[f"ln_{v}"] = safe_log(d[v])
+        d, city_dummies = add_city_dummies(d, "city_std")
+        d, year_dummies = add_year_dummies(d)
+        xvars = ["ln_pv_gw", "ln_wind_gw", "ln_nev_10k_units", "ln_storage_mw"] + city_dummies + year_dummies
+        outs.append(("九市-城市FE+年份FE（2014-2019）", fit_time_series_ols(d, "ln_emission_city", xvars, trend=False, cluster=d["year"])) )
+
+    return outs
+
+
 def correlation_table_levels_diffs_detrend(df: pd.DataFrame, y_col: str, x_cols: List[str], label_prefix: str) -> pd.DataFrame:
     """构造水平、对数差分、去趋势残差的相关性表（Pearson/Spearman）。"""
     rows = []
@@ -807,6 +930,9 @@ def main():
     # 将相关性表生成条形图
     plot_corr_table_bars(OUTPUT_DIR / "关联性_相关性表_九市.csv", "九市")
     plot_corr_table_bars(OUTPUT_DIR / "关联性_相关性表_广东.csv", "广东")
+
+    # 弹性系数可视化
+    plot_elasticity_bars(outputs)
 
     print("已保存输出至:", OUTPUT_DIR)
 
