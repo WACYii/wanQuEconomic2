@@ -1,0 +1,244 @@
+====================================================================================================
+九市-无趋势（2014-2019）
+----------------------------------------------------------------------------------------------------
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:        ln_emission_gba   R-squared:                       0.992
+Model:                            OLS   Adj. R-squared:                  0.962
+Method:                 Least Squares   F-statistic:                     4573.
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):             0.0111
+Time:                        18:45:36   Log-Likelihood:                 14.109
+No. Observations:                   6   AIC:                            -18.22
+Df Residuals:                       1   BIC:                            -19.26
+Df Model:                           4                                         
+Covariance Type:                  HAC                                         
+====================================================================================
+                       coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------------
+const               22.4812      2.057     10.927      0.000      18.449      26.514
+ln_pv_gw            13.5139      0.948     14.260      0.000      11.657      15.371
+ln_wind_gw          -3.3444      0.580     -5.766      0.000      -4.481      -2.208
+ln_nev_10k_units    -1.1236      0.062    -18.145      0.000      -1.245      -1.002
+ln_storage_mw       -5.3013      0.766     -6.925      0.000      -6.802      -3.801
+==============================================================================
+Omnibus:                          nan   Durbin-Watson:                   2.755
+Prob(Omnibus):                    nan   Jarque-Bera (JB):                0.448
+Skew:                          -0.290   Prob(JB):                        0.799
+Kurtosis:                       1.794   Cond. No.                     1.37e+03
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 1 lags and without small sample correction
+[2] The condition number is large, 1.37e+03. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+====================================================================================================
+九市-一阶差分（2014-2019）
+----------------------------------------------------------------------------------------------------
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       1.000
+Model:                            OLS   Adj. R-squared:                    nan
+Method:                 Least Squares   F-statistic:                 4.598e+28
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):                nan
+Time:                        18:45:36   Log-Likelihood:                 157.04
+No. Observations:                   5   AIC:                            -304.1
+Df Residuals:                       0   BIC:                            -306.0
+Df Model:                           4                                         
+Covariance Type:                  HAC                                         
+======================================================================================
+                         coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------------
+const                  0.6154   2.75e-14   2.24e+13      0.000       0.615       0.615
+d_ln_pv_gw            12.4260   1.63e-13   7.61e+13      0.000      12.426      12.426
+d_ln_wind_gw          -4.2030   4.94e-14  -8.51e+13      0.000      -4.203      -4.203
+d_ln_nev_10k_units    -1.1095   1.38e-14  -8.03e+13      0.000      -1.109      -1.109
+d_ln_storage_mw       -5.2793   1.11e-13  -4.74e+13      0.000      -5.279      -5.279
+==============================================================================
+Omnibus:                          nan   Durbin-Watson:                   0.014
+Prob(Omnibus):                    nan   Jarque-Bera (JB):                0.689
+Skew:                           0.209   Prob(JB):                        0.709
+Kurtosis:                       1.230   Cond. No.                         127.
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 1 lags and without small sample correction
+
+====================================================================================================
+九市-滞后解释变量（t-1）
+----------------------------------------------------------------------------------------------------
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:        ln_emission_gba   R-squared:                       1.000
+Model:                            OLS   Adj. R-squared:                    nan
+Method:                 Least Squares   F-statistic:                 5.673e+27
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):                nan
+Time:                        18:45:36   Log-Likelihood:                 143.09
+No. Observations:                   5   AIC:                            -276.2
+Df Residuals:                       0   BIC:                            -278.1
+Df Model:                           4                                         
+Covariance Type:                  HAC                                         
+=========================================================================================
+                            coef    std err          z      P>|z|      [0.025      0.975]
+-----------------------------------------------------------------------------------------
+const                     2.2726   7.59e-14      3e+13      0.000       2.273       2.273
+ln_pv_gw_lag1             5.3748   1.81e-12   2.97e+12      0.000       5.375       5.375
+ln_wind_gw_lag1          12.7742   1.09e-12   1.17e+13      0.000      12.774      12.774
+ln_nev_10k_units_lag1     0.0354   2.12e-13   1.67e+11      0.000       0.035       0.035
+ln_storage_mw_lag1        3.6091   4.66e-13   7.74e+12      0.000       3.609       3.609
+trend                    -7.9425   1.21e-12  -6.58e+12      0.000      -7.942      -7.942
+==============================================================================
+Omnibus:                          nan   Durbin-Watson:                   0.048
+Prob(Omnibus):                    nan   Jarque-Bera (JB):                0.389
+Skew:                          -0.116   Prob(JB):                        0.823
+Kurtosis:                       1.653   Cond. No.                         571.
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 1 lags and without small sample correction
+[2] The input rank is higher than the number of observations.
+
+====================================================================================================
+广东-无趋势（2014-2021）
+----------------------------------------------------------------------------------------------------
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:         ln_emission_gd   R-squared:                       0.927
+Model:                            OLS   Adj. R-squared:                  0.830
+Method:                 Least Squares   F-statistic:                     50.45
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):            0.00439
+Time:                        18:45:36   Log-Likelihood:                 18.249
+No. Observations:                   8   AIC:                            -26.50
+Df Residuals:                       3   BIC:                            -26.10
+Df Model:                           4                                         
+Covariance Type:                  HAC                                         
+====================================================================================
+                       coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------------
+const                7.1521      0.602     11.875      0.000       5.972       8.333
+ln_pv_gw             0.7522      0.513      1.467      0.142      -0.253       1.757
+ln_wind_gw          -0.0410      0.231     -0.178      0.859      -0.493       0.411
+ln_nev_10k_units    -0.0579      0.050     -1.151      0.250      -0.156       0.041
+ln_storage_mw       -0.3138      0.188     -1.669      0.095      -0.682       0.055
+==============================================================================
+Omnibus:                        1.015   Durbin-Watson:                   2.076
+Prob(Omnibus):                  0.602   Jarque-Bera (JB):                0.589
+Skew:                          -0.074   Prob(JB):                        0.745
+Kurtosis:                       1.679   Cond. No.                         462.
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 1 lags and without small sample correction
+
+====================================================================================================
+广东-一阶差分（2014-2021）
+----------------------------------------------------------------------------------------------------
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       0.474
+Model:                            OLS   Adj. R-squared:                 -0.579
+Method:                 Least Squares   F-statistic:                     13.42
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):             0.0705
+Time:                        18:45:36   Log-Likelihood:                 13.257
+No. Observations:                   7   AIC:                            -16.51
+Df Residuals:                       2   BIC:                            -16.79
+Df Model:                           4                                         
+Covariance Type:                  HAC                                         
+======================================================================================
+                         coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------------
+const                 -0.1308      0.119     -1.100      0.271      -0.364       0.102
+d_ln_pv_gw             0.9020      0.423      2.133      0.033       0.073       1.731
+d_ln_wind_gw           0.1467      0.256      0.574      0.566      -0.354       0.648
+d_ln_nev_10k_units    -0.1005      0.063     -1.603      0.109      -0.223       0.022
+d_ln_storage_mw       -0.2343      0.237     -0.990      0.322      -0.698       0.230
+==============================================================================
+Omnibus:                          nan   Durbin-Watson:                   1.844
+Prob(Omnibus):                    nan   Jarque-Bera (JB):                0.864
+Skew:                           0.613   Prob(JB):                        0.649
+Kurtosis:                       1.792   Cond. No.                         54.2
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 1 lags and without small sample correction
+
+====================================================================================================
+广东-滞后解释变量（t-1）
+----------------------------------------------------------------------------------------------------
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:         ln_emission_gd   R-squared:                       0.985
+Model:                            OLS   Adj. R-squared:                  0.910
+Method:                 Least Squares   F-statistic:                     524.0
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):             0.0332
+Time:                        18:45:36   Log-Likelihood:                 21.554
+No. Observations:                   7   AIC:                            -31.11
+Df Residuals:                       1   BIC:                            -31.43
+Df Model:                           5                                         
+Covariance Type:                  HAC                                         
+=========================================================================================
+                            coef    std err          z      P>|z|      [0.025      0.975]
+-----------------------------------------------------------------------------------------
+const                     7.1146      0.298     23.857      0.000       6.530       7.699
+ln_pv_gw_lag1             0.0867      0.298      0.291      0.771      -0.497       0.671
+ln_wind_gw_lag1           0.2839      0.199      1.429      0.153      -0.105       0.673
+ln_nev_10k_units_lag1     0.0940      0.019      4.857      0.000       0.056       0.132
+ln_storage_mw_lag1       -0.4189      0.084     -5.006      0.000      -0.583      -0.255
+trend                     0.1622      0.145      1.116      0.264      -0.123       0.447
+==============================================================================
+Omnibus:                          nan   Durbin-Watson:                   3.054
+Prob(Omnibus):                    nan   Jarque-Bera (JB):                1.123
+Skew:                          -0.906   Prob(JB):                        0.570
+Kurtosis:                       2.247   Cond. No.                         794.
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity and autocorrelation robust (HAC) using 1 lags and without small sample correction
+
+====================================================================================================
+九市-城市FE+年份FE（2014-2019）
+----------------------------------------------------------------------------------------------------
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:       ln_emission_city   R-squared:                       0.975
+Model:                            OLS   Adj. R-squared:                  0.966
+Method:                 Least Squares   F-statistic:                     501.5
+Date:                Wed, 13 Aug 2025   Prob (F-statistic):           9.58e-07
+Time:                        18:45:36   Log-Likelihood:                 37.016
+No. Observations:                  47   AIC:                            -46.03
+Df Residuals:                      33   BIC:                            -20.13
+Df Model:                          13                                         
+Covariance Type:              cluster                                         
+====================================================================================
+                       coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------------
+const                0.8455      0.024     35.883      0.000       0.799       0.892
+ln_pv_gw            -0.6626      0.015    -43.869      0.000      -0.692      -0.633
+ln_wind_gw          -0.2165      0.007    -33.007      0.000      -0.229      -0.204
+ln_nev_10k_units    -0.7217      0.031    -23.317      0.000      -0.782      -0.661
+ln_storage_mw        1.2526      0.038     32.840      0.000       1.178       1.327
+city_中山             -1.8122      0.100    -18.176      0.000      -2.008      -1.617
+city_佛山             -0.4297      0.152     -2.824      0.005      -0.728      -0.131
+city_广州              0.5975      0.096      6.235      0.000       0.410       0.785
+city_惠州             -0.8121      0.168     -4.829      0.000      -1.142      -0.482
+city_江门             -0.9558      0.134     -7.151      0.000      -1.218      -0.694
+city_深圳             -0.5761      0.217     -2.661      0.008      -1.001      -0.152
+city_珠海             -1.2781      0.148     -8.657      0.000      -1.568      -0.989
+city_肇庆             -1.1566      0.132     -8.789      0.000      -1.415      -0.899
+year_2015            0.1658      0.012     13.399      0.000       0.142       0.190
+year_2016            0.1998      0.018     11.410      0.000       0.166       0.234
+year_2017            0.0353      0.060      0.584      0.559      -0.083       0.154
+year_2018           -0.1430      0.012    -11.786      0.000      -0.167      -0.119
+year_2019           -0.3147      0.010    -30.053      0.000      -0.335      -0.294
+==============================================================================
+Omnibus:                        4.255   Durbin-Watson:                   1.649
+Prob(Omnibus):                  0.119   Jarque-Bera (JB):                3.356
+Skew:                          -0.394   Prob(JB):                        0.187
+Kurtosis:                       4.045   Cond. No.                     3.09e+17
+==============================================================================
+
+Notes:
+[1] Standard Errors are robust to cluster correlation (cluster)
+[2] The smallest eigenvalue is 1.5e-32. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.
+
