@@ -183,6 +183,34 @@ def add_city_dummies(df: pd.DataFrame, city_col: str) -> Tuple[pd.DataFrame, Lis
 
 # ------------------------ 图表与导出 ------------------------
 
+def compute_descriptive_stats(df: pd.DataFrame, cols: List[str]) -> pd.DataFrame:
+    sub = df[cols].copy()
+    desc = sub.describe(percentiles=[0.25, 0.5, 0.75]).T
+    desc = desc.rename(columns={
+        "count": "样本数",
+        "mean": "均值",
+        "std": "标准差",
+        "min": "最小值",
+        "25%": "P25",
+        "50%": "中位数",
+        "75%": "P75",
+        "max": "最大值",
+    })
+    desc.insert(0, "变量", desc.index)
+    return desc.reset_index(drop=True)
+
+
+def save_corr_heatmap(df: pd.DataFrame, cols: List[str], title: str, out_png: Path) -> None:
+    ensure_chinese_font()
+    corr = df[cols].corr()
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="Blues", square=True)
+    plt.title(title)
+    plt.tight_layout()
+    plt.savefig(out_png, dpi=200)
+    plt.close()
+
+
 def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba: pd.DataFrame, panel: pd.DataFrame, outputs):
     ensure_chinese_font()
 
@@ -320,6 +348,94 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
         doc.save(OUTPUT_DIR / "回归结果汇总.docx")
 
 
+def elasticity_table_from_outputs(outputs: List[Tuple[str, sm.regression.linear_model.RegressionResultsWrapper]]) -> pd.DataFrame:
+    rows = []
+    for name, res in outputs:
+        for var in res.params.index:
+            if var.startswith("ln_"):
+                beta = float(res.params[var])
+                rows.append({
+                    "模型": name,
+                    "变量": var,
+                    "弹性(系数)": beta,
+                    "10%变动对应排放变化(%)": beta * 10.0,
+                    "5%变动对应排放变化(%)": beta * 5.0,
+                })
+    return pd.DataFrame(rows)
+
+
+def first_difference(df: pd.DataFrame, y: str, x_vars: List[str], group_col: Optional[str] = None) -> pd.DataFrame:
+    d = df.copy().sort_values([group_col, "year"]) if group_col else df.copy().sort_values("year")
+    for col in [y] + x_vars:
+        d[f"d_{col}"] = d.groupby(group_col)[col].diff() if group_col else d[col].diff()
+    if group_col:
+        keep_cols = [group_col, "year"] + [f"d_{y}"] + [f"d_{x}" for x in x_vars]
+    else:
+        keep_cols = ["year"] + [f"d_{y}"] + [f"d_{x}" for x in x_vars]
+    return d[keep_cols].dropna().reset_index(drop=True)
+
+
+def add_year_dummies(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
+    year_d = pd.get_dummies(df["year"].astype(int), prefix="year", drop_first=True)
+    return pd.concat([df, year_d], axis=1), list(year_d.columns)
+
+
+def robustness_checks(merged_gba: pd.DataFrame, merged_gd: pd.DataFrame, panel_merged: pd.DataFrame) -> List[Tuple[str, sm.regression.linear_model.RegressionResultsWrapper]]:
+    outs: List[Tuple[str, sm.regression.linear_model.RegressionResultsWrapper]] = []
+
+    # -- 九市时间序列：无趋势、差分、滞后 --
+    if len(merged_gba) >= 5:
+        d = merged_gba.copy().sort_values("year")
+        d["ln_emission_gba"] = safe_log(d["emission_gba"])
+        for v in ["pv_gw", "wind_gw", "nev_10k_units", "storage_mw"]:
+            d[f"ln_{v}"] = safe_log(d[v])
+        xvars = ["ln_pv_gw", "ln_wind_gw", "ln_nev_10k_units", "ln_storage_mw"]
+        # 无趋势
+        outs.append(("九市-无趋势（2014-2019）", fit_time_series_ols(d, "ln_emission_gba", xvars, trend=False)))
+        # 差分
+        fd = first_difference(d, "ln_emission_gba", xvars)
+        if len(fd) >= 4:
+            outs.append(("九市-一阶差分（2014-2019）", fit_time_series_ols(fd.rename(columns={"d_ln_emission_gba": "y"}), "y", [f"d_{x}" for x in xvars], trend=False)))
+        # 滞后X
+        d_lag = d.copy()
+        for v in xvars:
+            d_lag[v + "_lag1"] = d_lag[v].shift(1)
+        d_lag = d_lag.dropna().reset_index(drop=True)
+        if len(d_lag) >= 5:
+            outs.append(("九市-滞后解释变量（t-1）", fit_time_series_ols(d_lag, "ln_emission_gba", [v + "_lag1" for v in xvars], trend=True)))
+
+    # -- 广东时间序列：无趋势、差分、滞后 --
+    if len(merged_gd) >= 6:
+        d = merged_gd.copy().sort_values("year")
+        d["ln_emission_gd"] = safe_log(d["emission_guangdong"])
+        for v in ["pv_gw", "wind_gw", "nev_10k_units", "storage_mw"]:
+            d[f"ln_{v}"] = safe_log(d[v])
+        xvars = ["ln_pv_gw", "ln_wind_gw", "ln_nev_10k_units", "ln_storage_mw"]
+        outs.append(("广东-无趋势（2014-2021）", fit_time_series_ols(d, "ln_emission_gd", xvars, trend=False)))
+        fd = first_difference(d, "ln_emission_gd", xvars)
+        if len(fd) >= 5:
+            outs.append(("广东-一阶差分（2014-2021）", fit_time_series_ols(fd.rename(columns={"d_ln_emission_gd": "y"}), "y", [f"d_{x}" for x in xvars], trend=False)))
+        d_lag = d.copy()
+        for v in xvars:
+            d_lag[v + "_lag1"] = d_lag[v].shift(1)
+        d_lag = d_lag.dropna().reset_index(drop=True)
+        if len(d_lag) >= 6:
+            outs.append(("广东-滞后解释变量（t-1）", fit_time_series_ols(d_lag, "ln_emission_gd", [v + "_lag1" for v in xvars], trend=True)))
+
+    # -- 面板：年虚拟变量替代趋势 --
+    if len(panel_merged) >= 30:
+        d = panel_merged.copy()
+        d["ln_emission_city"] = safe_log(d["emission"])
+        for v in ["pv_gw", "wind_gw", "nev_10k_units", "storage_mw"]:
+            d[f"ln_{v}"] = safe_log(d[v])
+        d, city_dummies = add_city_dummies(d, "city_std")
+        d, year_dummies = add_year_dummies(d)
+        xvars = ["ln_pv_gw", "ln_wind_gw", "ln_nev_10k_units", "ln_storage_mw"] + city_dummies + year_dummies
+        outs.append(("九市-城市FE+年份FE（2014-2019）", fit_time_series_ols(d, "ln_emission_city", xvars, trend=False, cluster=d["year"])) )
+
+    return outs
+
+
 # ------------------------ 主流程 ------------------------
 
 def main():
@@ -380,6 +496,55 @@ def main():
         for name, res in outputs:
             f.write("=" * 100 + "\n"); f.write(name + "\n"); f.write("-" * 100 + "\n")
             f.write(res.summary().as_text()); f.write("\n\n")
+
+    # 5.1 变量选取与描述性统计
+    # 九市窗口
+    if not merged_gba.empty:
+        stats_gba = compute_descriptive_stats(merged_gba, ["emission_gba", "pv_gw", "wind_gw", "nev_10k_units", "re_total_gw", "storage_mw"])
+        stats_gba.to_csv(OUTPUT_DIR / "变量描述统计_九市_2014_2019.csv", index=False)
+        save_corr_heatmap(merged_gba, ["emission_gba", "pv_gw", "wind_gw", "nev_10k_units", "storage_mw"], "九市：变量相关系数矩阵（2014-2019）", OUTPUT_DIR / "图_相关矩阵_九市_2014_2019.png")
+    # 广东窗口
+    if not merged_gd.empty:
+        stats_gd = compute_descriptive_stats(merged_gd, ["emission_guangdong", "pv_gw", "wind_gw", "nev_10k_units", "re_total_gw", "storage_mw"])
+        stats_gd.to_csv(OUTPUT_DIR / "变量描述统计_广东_2014_2021.csv", index=False)
+        save_corr_heatmap(merged_gd, ["emission_guangdong", "pv_gw", "wind_gw", "nev_10k_units", "storage_mw"], "广东：变量相关系数矩阵（2014-2021）", OUTPUT_DIR / "图_相关矩阵_广东_2014_2021.png")
+    # 面板窗口
+    panel_merged = panel.merge(df_nei, on="year", how="left")
+    if not panel_merged.empty:
+        stats_panel = compute_descriptive_stats(panel_merged, ["emission", "pv_gw", "wind_gw", "nev_10k_units", "storage_mw"])
+        stats_panel.to_csv(OUTPUT_DIR / "变量描述统计_面板_2014_2019.csv", index=False)
+
+    # 5.2 弹性系数测算
+    elast = elasticity_table_from_outputs(outputs)
+    if not elast.empty:
+        elast.to_csv(OUTPUT_DIR / "弹性系数测算.csv", index=False)
+
+    # 5.3 稳健性检验
+    robust_outs = robustness_checks(merged_gba, merged_gd, panel_merged)
+    # 保存稳健性文本
+    with open(OUTPUT_DIR / "robustness_results.txt", "w", encoding="utf-8") as f:
+        for name, res in robust_outs:
+            f.write("=" * 100 + "\n"); f.write(name + "\n"); f.write("-" * 100 + "\n")
+            f.write(res.summary().as_text()); f.write("\n\n")
+    # Word 汇总
+    if robust_outs:
+        doc = Document()
+        doc.add_heading("稳健性检验结果", level=1)
+        for name, res in robust_outs:
+            doc.add_heading(name, level=2)
+            tbl = doc.add_table(rows=1, cols=6)
+            hdr = tbl.rows[0].cells
+            hdr[0].text = "变量"; hdr[1].text = "系数"; hdr[2].text = "标准误"; hdr[3].text = "下界95%"; hdr[4].text = "上界95%"; hdr[5].text = "p值"
+            params = res.params; se = res.bse; conf = res.conf_int(); p = res.pvalues
+            for var in params.index:
+                row = tbl.add_row().cells
+                row[0].text = str(var)
+                row[1].text = f"{params[var]:.4f}"
+                row[2].text = f"{se[var]:.4f}"
+                row[3].text = f"{conf.loc[var, 0]:.4f}"
+                row[4].text = f"{conf.loc[var, 1]:.4f}"
+                row[5].text = f"{p[var]:.4f}"
+        doc.save(OUTPUT_DIR / "稳健性检验_结果汇总.docx")
 
     # 图表与Word表格
     plot_and_export(df_gba_year, df_nei, merged_gba, panel, outputs)
