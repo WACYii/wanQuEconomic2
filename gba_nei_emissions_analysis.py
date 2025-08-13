@@ -42,21 +42,41 @@ def strip_zwsp(text: str) -> str:
 
 def ensure_chinese_font() -> Optional[str]:
     try:
-        from matplotlib import font_manager
-        if not CHS_FONT_PATH.exists():
+        from matplotlib import font_manager, rcParams
+        # 优先使用项目内字体
+        local_font = CHS_FONT_PATH
+        if not local_font.exists():
             import urllib.request
             url = (
                 "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/"
                 "NotoSansSC-Regular.otf"
             )
             try:
-                urllib.request.urlretrieve(url, CHS_FONT_PATH)
+                urllib.request.urlretrieve(url, local_font)
             except Exception:
-                return None
-        font_manager.fontManager.addfont(str(CHS_FONT_PATH))
-        plt.rcParams["font.sans-serif"] = ["Noto Sans SC", "NotoSansSC", "DejaVu Sans"]
-        plt.rcParams["axes.unicode_minus"] = False
-        return str(CHS_FONT_PATH)
+                pass
+        if local_font.exists():
+            font_manager.fontManager.addfont(str(local_font))
+        # 常见系统中文字体候选
+        candidates = [
+            "Noto Sans CJK SC",  # Noto 家族内部名
+            "Noto Sans SC",
+            "Microsoft YaHei",  # Windows雅黑
+            "SimHei",            # Windows黑体
+            "PingFang SC",       # macOS苹方
+            "Source Han Sans CN",# 思源黑体
+            "WenQuanYi Zen Hei", # Linux文泉驿
+            "DejaVu Sans",       # 最后兜底
+        ]
+        rcParams["font.family"] = ["sans-serif"]
+        rcParams["font.sans-serif"] = candidates
+        rcParams["axes.unicode_minus"] = False
+        # 刷新字体缓存，确保新字体生效
+        try:
+            font_manager._load_fontmanager(try_read_cache=False)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        return str(local_font) if local_font.exists() else None
     except Exception:
         return None
 
