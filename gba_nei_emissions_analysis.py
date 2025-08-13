@@ -368,6 +368,53 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
         doc.save(OUTPUT_DIR / "回归结果汇总.docx")
 
 
+def plot_coef_forest(res: sm.regression.linear_model.RegressionResultsWrapper, name: str, out_path: Path, title: Optional[str] = None):
+    ensure_chinese_font()
+    params = res.params.copy()
+    conf = res.conf_int()
+    # 仅绘制核心解释变量（对数项）
+    mask = [v for v in params.index if v.startswith("ln_")]
+    if not mask:
+        return
+    coef = params[mask]
+    ci_low = conf.loc[mask, 0]
+    ci_high = conf.loc[mask, 1]
+    order = coef.abs().sort_values(ascending=True).index
+    plt.figure(figsize=(7, max(2, 0.5*len(order)+1)))
+    y = np.arange(len(order))
+    plt.hlines(y, ci_low[order], ci_high[order], color="#2C3E50")
+    plt.plot(coef[order], y, 'o', color="#e67e22")
+    plt.axvline(0, color="#7f8c8d", lw=1)
+    plt.yticks(y, order)
+    plt.xlabel("系数及95%置信区间")
+    plt.title(title or f"{name}：回归系数图")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200)
+    plt.close()
+
+
+def plot_corr_table_bars(csv_path: Path, label_prefix: str):
+    ensure_chinese_font()
+    if not csv_path.exists():
+        return
+    import pandas as pd
+    df = pd.read_csv(csv_path)
+    # 针对不同类型绘制Pearson条形图
+    vars_ = df['变量'].unique()
+    types = df['类型'].unique()
+    for v in vars_:
+        sub = df[df['变量']==v]
+        plt.figure(figsize=(6,4))
+        plt.bar(sub['类型'], sub['Pearson'], color="#3498db")
+        plt.axhline(0, color="#7f8c8d", lw=1)
+        plt.ylabel('Pearson相关系数')
+        plt.xticks(rotation=20)
+        plt.title(f"{label_prefix}：{v} 与排放的相关（水平/差分/去趋势）")
+        plt.tight_layout()
+        plt.savefig(OUTPUT_DIR / f"图_相关性条形_{label_prefix}_{v}.png", dpi=200)
+        plt.close()
+
+
 def elasticity_table_from_outputs(outputs: List[Tuple[str, sm.regression.linear_model.RegressionResultsWrapper]]) -> pd.DataFrame:
     rows = []
     for name, res in outputs:
@@ -694,6 +741,10 @@ def main():
         for name, res in outputs:
             f.write("=" * 100 + "\n"); f.write(name + "\n"); f.write("-" * 100 + "\n")
             f.write(res.summary().as_text()); f.write("\n\n")
+    # 回归系数图（主结果）
+    for name, res in outputs:
+        out_png = OUTPUT_DIR / f"图_回归系数_{name}.png"
+        plot_coef_forest(res, name, out_png)
 
     # 5.1 变量选取与描述性统计
     # 九市窗口
@@ -724,6 +775,10 @@ def main():
         for name, res in robust_outs:
             f.write("=" * 100 + "\n"); f.write(name + "\n"); f.write("-" * 100 + "\n")
             f.write(res.summary().as_text()); f.write("\n\n")
+    # 稳健性系数图
+    for name, res in robust_outs:
+        out_png = OUTPUT_DIR / f"图_稳健性_回归系数_{name}.png"
+        plot_coef_forest(res, name, out_png)
     # Word 汇总
     if robust_outs:
         doc = Document()
@@ -749,6 +804,9 @@ def main():
 
     # 4.3 两者关联性初步分析
     preliminary_association_analysis(merged_gba, merged_gd)
+    # 将相关性表生成条形图
+    plot_corr_table_bars(OUTPUT_DIR / "关联性_相关性表_九市.csv", "九市")
+    plot_corr_table_bars(OUTPUT_DIR / "关联性_相关性表_广东.csv", "广东")
 
     print("已保存输出至:", OUTPUT_DIR)
 
