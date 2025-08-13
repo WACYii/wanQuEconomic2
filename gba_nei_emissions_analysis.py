@@ -43,42 +43,91 @@ def strip_zwsp(text: str) -> str:
 def ensure_chinese_font() -> Optional[str]:
     try:
         from matplotlib import font_manager, rcParams
-        # 优先使用项目内字体
-        local_font = CHS_FONT_PATH
-        if not local_font.exists():
+        # 本地fonts目录：注册所有ttf/otf
+        try:
+            for p in FONTS_DIR.glob("**/*.otf"):
+                font_manager.fontManager.addfont(str(p))
+            for p in FONTS_DIR.glob("**/*.ttf"):
+                font_manager.fontManager.addfont(str(p))
+        except Exception:
+            pass
+        # 优先尝试下载思源或Noto（若不存在）
+        local_noto = CHS_FONT_PATH
+        if not local_noto.exists():
             import urllib.request
-            url = (
-                "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/"
-                "NotoSansSC-Regular.otf"
-            )
+            candidates = [
+                # Noto Simplified Chinese
+                "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/OTF/SC/NotoSansSC-Regular.otf",
+                # 思源黑体（子集）
+                "https://raw.githubusercontent.com/adobe-fonts/source-han-sans/release/SubsetOTF/CN/SourceHanSansCN-Normal.otf",
+            ]
+            for url in candidates:
+                try:
+                    local_noto.parent.mkdir(parents=True, exist_ok=True)
+                    urllib.request.urlretrieve(url, local_noto)
+                    break
+                except Exception:
+                    continue
+            # 如果是思源文件名，改为按约定名保存副本
+            if local_noto.exists() and local_noto.name != "NotoSansSC-Regular.otf":
+                pass
+        if local_noto.exists():
             try:
-                urllib.request.urlretrieve(url, local_font)
+                font_manager.fontManager.addfont(str(local_noto))
             except Exception:
                 pass
-        if local_font.exists():
-            font_manager.fontManager.addfont(str(local_font))
-        # 常见系统中文字体候选
+        # 候选字体
         candidates = [
-            "Noto Sans CJK SC",  # Noto 家族内部名
+            "Source Han Sans CN",
+            "Noto Sans CJK SC",
             "Noto Sans SC",
-            "Microsoft YaHei",  # Windows雅黑
-            "SimHei",            # Windows黑体
-            "PingFang SC",       # macOS苹方
-            "Source Han Sans CN",# 思源黑体
-            "WenQuanYi Zen Hei", # Linux文泉驿
-            "DejaVu Sans",       # 最后兜底
+            "Microsoft YaHei",
+            "SimHei",
+            "PingFang SC",
+            "WenQuanYi Zen Hei",
+            "DejaVu Sans",
         ]
         rcParams["font.family"] = ["sans-serif"]
         rcParams["font.sans-serif"] = candidates
         rcParams["axes.unicode_minus"] = False
-        # 刷新字体缓存，确保新字体生效
         try:
             font_manager._load_fontmanager(try_read_cache=False)  # type: ignore[attr-defined]
         except Exception:
             pass
-        return str(local_font) if local_font.exists() else None
+        return str(local_noto) if local_noto.exists() else None
     except Exception:
         return None
+
+
+# ========== 注释数值的辅助函数 ==========
+
+def _annotate_points(ax, xs, ys, fmt="{:.2f}", fontsize=8, color="#34495e", dx=0, dy=0.02):
+    try:
+        ymin, ymax = ax.get_ylim()
+        yr = ymax - ymin if ymax > ymin else 1.0
+        for x, y in zip(xs, ys):
+            ax.text(x, y + dy * yr, fmt.format(y), fontsize=fontsize, color=color, ha="center", va="bottom")
+    except Exception:
+        pass
+
+
+def _annotate_bars(ax, fmt="{:.2f}", fontsize=8, color="#34495e"):
+    try:
+        for p in ax.patches:
+            h = p.get_height()
+            x = p.get_x() + p.get_width() / 2
+            y = h if h >= 0 else 0
+            ax.text(x, y, fmt.format(h), fontsize=fontsize, color=color, ha="center", va="bottom")
+    except Exception:
+        pass
+
+
+def _annotate_stems(ax, xs, ys, fmt="{:.2f}", fontsize=8, color="#34495e"):
+    try:
+        for x, y in zip(xs, ys):
+            ax.text(x, y + (0.02 if y >= 0 else -0.02), fmt.format(y), fontsize=fontsize, color=color, ha="center", va="bottom")
+    except Exception:
+        pass
 
 
 def normalize_city_cn(name: str) -> str:
@@ -242,6 +291,8 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
     ax1.set_xlabel("年份")
     ax1.set_ylabel("碳排放（原单位）")
     ax1.legend()
+    # 标注点值
+    _annotate_points(ax1, df_gba_year["year"], df_gba_year["emission_gba"], fmt="{:.1f}")
     fig1.tight_layout()
     fig1.savefig(OUTPUT_DIR / "图1_九市碳排放总量_1997_2019.png", dpi=200)
     plt.close(fig1)
@@ -251,6 +302,10 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
     ax2.plot(df_nei["year"], df_nei["pv_gw"], marker="o", label="光伏装机（GW）")
     ax2.plot(df_nei["year"], df_nei["wind_gw"], marker="o", label="风电装机（GW）")
     ax2.plot(df_nei["year"], df_nei["re_total_gw"], marker="o", label="可再生能源装机总量（GW）")
+    # 标注
+    _annotate_points(ax2, df_nei["year"], df_nei["pv_gw"], fmt="{:.1f}")
+    _annotate_points(ax2, df_nei["year"], df_nei["wind_gw"], fmt="{:.1f}")
+    _annotate_points(ax2, df_nei["year"], df_nei["re_total_gw"], fmt="{:.1f}")
     ax2.set_title("大湾区新能源装机规模（2014-2023）")
     ax2.set_xlabel("年份")
     ax2.set_ylabel("装机规模（GW）")
@@ -262,11 +317,20 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
     # 图3：新能源汽车与储能
     fig3, ax3a = plt.subplots(figsize=(10, 6))
     ax3a.plot(df_nei["year"], df_nei["nev_10k_units"], color="#27AE60", marker="s", label="新能源汽车保有量（万辆）")
+    # 标注左轴
+    _annotate_points(ax3a, df_nei["year"], df_nei["nev_10k_units"], fmt="{:.1f}")
     ax3a.set_xlabel("年份")
     ax3a.set_ylabel("新能源汽车保有量（万辆）", color="#27AE60")
     ax3a.tick_params(axis="y", labelcolor="#27AE60")
     ax3b = ax3a.twinx()
     ax3b.plot(df_nei["year"], df_nei["storage_mw"], color="#8E44AD", marker="^", label="储能装机（MW）")
+    # 标注右轴（用右轴坐标系）
+    try:
+        ymin, ymax = ax3b.get_ylim(); yr = ymax - ymin if ymax > ymin else 1.0
+        for x, y in zip(df_nei["year"], df_nei["storage_mw"]):
+            ax3b.text(x, y + 0.02 * yr, f"{y:.0f}", fontsize=8, color="#8E44AD", ha="center", va="bottom")
+    except Exception:
+        pass
     ax3b.set_ylabel("储能装机（MW）", color="#8E44AD")
     ax3b.tick_params(axis="y", labelcolor="#8E44AD")
     ax3a.set_title("大湾区新能源汽车与储能发展（2014-2023）")
@@ -285,6 +349,8 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
         for var, label in labels_map.items():
             fig, ax = plt.subplots(figsize=(6, 5))
             sns.regplot(data=merged_gba, x=var, y="emission_gba", ax=ax, marker="o", color="#2C3E50")
+            # 标注散点
+            _annotate_points(ax, merged_gba[var], merged_gba["emission_gba"], fmt="{:.1f}")
             ax.set_title(f"九市碳排放与{label}的关系（2014-2019）")
             ax.set_xlabel(label)
             ax.set_ylabel("九市碳排放（原单位）")
@@ -296,13 +362,20 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
     if not merged_gba.empty:
         fig4, ax4a = plt.subplots(figsize=(10, 6))
         ax4a.plot(merged_gba["year"], merged_gba["emission_gba"], color="#e67e22", marker="o", label="九市碳排放")
+        # 标注左轴
+        _annotate_points(ax4a, merged_gba["year"], merged_gba["emission_gba"], fmt="{:.1f}")
         ax4a.set_xlabel("年份")
         ax4a.set_ylabel("九市碳排放（原单位）", color="#e67e22")
         ax4a.tick_params(axis="y", labelcolor="#e67e22")
         ax4b = ax4a.twinx()
         ax4b.plot(merged_gba["year"], merged_gba["re_total_gw"], color="#2980b9", marker="s", label="可再生能源装机总量（GW）")
-        ax4b.set_ylabel("可再生能源装机总量（GW）", color="#2980b9")
-        ax4b.tick_params(axis="y", labelcolor="#2980b9")
+        # 标注右轴
+        try:
+            ymin, ymax = ax4b.get_ylim(); yr = ymax - ymin if ymax > ymin else 1.0
+            for x, y in zip(merged_gba["year"], merged_gba["re_total_gw"]):
+                ax4b.text(x, y + 0.02 * yr, f"{y:.1f}", fontsize=8, color="#2980b9", ha="center", va="bottom")
+        except Exception:
+            pass
         ax4a.set_title("九市碳排放与可再生能源装机（2014-2019）")
         fig4.tight_layout()
         fig4.savefig(OUTPUT_DIR / "图5_双轴_九市碳排放_vs_可再生装机_2014_2019.png", dpi=200)
@@ -313,6 +386,10 @@ def plot_and_export(df_gba_year: pd.DataFrame, df_nei: pd.DataFrame, merged_gba:
         fig5, ax5 = plt.subplots(figsize=(10, 6))
         for c, sub in panel.groupby("city_std"):
             ax5.plot(sub["year"], sub["emission"], marker="o", label=c)
+            # 仅标注末端点，避免拥挤
+            sub2 = sub.sort_values("year")
+            if not sub2.empty:
+                ax5.text(sub2["year"].iloc[-1], sub2["emission"].iloc[-1], f"{sub2["emission"].iloc[-1]:.1f}", fontsize=7, color="#2C3E50", ha="left", va="bottom")
         ax5.set_title("九市城市碳排放趋势（2014-2019）")
         ax5.set_xlabel("年份")
         ax5.set_ylabel("碳排放（原单位）")
@@ -406,6 +483,9 @@ def plot_corr_table_bars(csv_path: Path, label_prefix: str):
         sub = df[df['变量']==v]
         plt.figure(figsize=(6,4))
         plt.bar(sub['类型'], sub['Pearson'], color="#3498db")
+        # 标注
+        for i, (t, val) in enumerate(zip(sub['类型'], sub['Pearson'])):
+            plt.text(i, val, f"{val:.2f}", ha="center", va="bottom", fontsize=8)
         plt.axhline(0, color="#7f8c8d", lw=1)
         plt.ylabel('Pearson相关系数')
         plt.xticks(rotation=20)
@@ -531,6 +611,10 @@ def plot_elasticity_bars(outputs: List[Tuple[str, sm.regression.linear_model.Reg
         yerr2 = [sub.set_index("变量").loc[v, "hi"] - sub.set_index("变量").loc[v, "弹性"] for v in order]
         plt.figure(figsize=(7, 4.5))
         plt.bar(order, sub.set_index("变量").loc[order, "弹性"], color="#1abc9c", yerr=[yerr, yerr2], capsize=4)
+        # 标注数值
+        for i, v in enumerate(order):
+            val = float(sub.set_index("变量").loc[v, "弹性"])
+            plt.text(i, val, f"{val:.2f}", ha="center", va="bottom", fontsize=8)
         plt.axhline(0, color="#7f8c8d", lw=1)
         plt.ylabel("弹性（ln-ln系数）")
         plt.xticks(rotation=20)
@@ -545,6 +629,8 @@ def plot_elasticity_bars(outputs: List[Tuple[str, sm.regression.linear_model.Reg
         pivot = pivot.loc[[v for v in pivot.index if v.startswith("ln_")]]
         pivot = pivot.sort_index()
         ax = pivot.plot(kind="bar", figsize=(9, 5))
+        # 标注
+        _annotate_bars(ax, fmt="{:.2f}")
         plt.axhline(0, color="#7f8c8d", lw=1)
         plt.ylabel("弹性（ln-ln系数）")
         plt.title("不同模型下的弹性对比")
@@ -700,6 +786,8 @@ def plot_lead_lag(df_ccf: pd.DataFrame, label_prefix: str, out_prefix: str):
             plt.setp(stemlines, linewidth=1.5)
         except Exception:
             pass
+        # 标注数值
+        _annotate_stems(plt.gca(), sub["滞后L"], sub["相关系数"], fmt="{:.2f}")
         plt.title(f"{label_prefix}：{var} 与排放的领先-滞后相关")
         plt.xlabel("滞后 L（正值表示X领先排放L年）")
         plt.ylabel("相关系数")
