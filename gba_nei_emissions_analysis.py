@@ -436,6 +436,184 @@ def robustness_checks(merged_gba: pd.DataFrame, merged_gd: pd.DataFrame, panel_m
     return outs
 
 
+def correlation_table_levels_diffs_detrend(df: pd.DataFrame, y_col: str, x_cols: List[str], label_prefix: str) -> pd.DataFrame:
+    """构造水平、对数差分、去趋势残差的相关性表（Pearson/Spearman）。"""
+    rows = []
+    d = df.copy().sort_values("year")
+    # 使用对数
+    d[f"ln_{y_col}"] = safe_log(d[y_col])
+    for x in x_cols:
+        d[f"ln_{x}"] = safe_log(d[x])
+    # 去趋势残差
+    t = np.arange(len(d)) + 1
+    for var in [f"ln_{y_col}"] + [f"ln_{x}" for x in x_cols]:
+        X = sm.add_constant(pd.Series(t, name="trend"))
+        res = sm.OLS(d[var], X).fit()
+        d[var+"_res"] = d[var] - res.fittedvalues
+    # 一阶差分
+    d_diff = d[["year"] + [f"ln_{y_col}"] + [f"ln_{x}" for x in x_cols]].diff().dropna()
+
+    def add_row(kind: str, xname: str, s1: pd.Series, s2: pd.Series):
+        rows.append({
+            "口径": label_prefix,
+            "类型": kind,
+            "变量": xname,
+            "Pearson": float(s1.corr(s2, method="pearson")),
+            "Spearman": float(s1.corr(s2, method="spearman")),
+            "样本数": int(s1.dropna().shape[0])
+        })
+
+    # 水平（对数）
+    for x in x_cols:
+        add_row("水平(对数)", x, d[f"ln_{y_col}"], d[f"ln_{x}"])
+    # 差分（对数差分）
+    for x in x_cols:
+        add_row("一阶差分(对数)", x, d_diff[f"ln_{y_col}"], d_diff[f"ln_{x}"])
+    # 去趋势（残差）
+    for x in x_cols:
+        add_row("去趋势(残差)", x, d[f"ln_{y_col}_res"], d[f"ln_{x}_res"])
+
+    return pd.DataFrame(rows)
+
+
+def lead_lag_cross_corr(df: pd.DataFrame, y_col: str, x_cols: List[str], label_prefix: str, lags: List[int] = [-2, -1, 0, 1, 2]) -> pd.DataFrame:
+    d = df.copy().sort_values("year")
+    d[f"ln_{y_col}"] = safe_log(d[y_col])
+    for x in x_cols:
+        d[f"ln_{x}"] = safe_log(d[x])
+    rows = []
+    for x in x_cols:
+        for L in lags:
+            if L >= 0:
+                s_x = d[f"ln_{x}"] .shift(L)
+                s_y = d[f"ln_{y_col}"]
+            else:
+                # 负滞后：y领先
+                s_x = d[f"ln_{x}"]
+                s_y = d[f"ln_{y_col}"] .shift(-L)
+            s = pd.concat([s_x, s_y], axis=1).dropna()
+            if len(s) >= 3:
+                corr = float(s.iloc[:,0].corr(s.iloc[:,1]))
+            else:
+                corr = np.nan
+            rows.append({"口径": label_prefix, "变量": x, "滞后L": L, "相关系数": corr, "样本数": len(s)})
+    return pd.DataFrame(rows)
+
+
+def plot_lead_lag(df_ccf: pd.DataFrame, label_prefix: str, out_prefix: str):
+    ensure_chinese_font()
+    for var, sub in df_ccf.groupby("变量"):
+        plt.figure(figsize=(6,4))
+        plt.axhline(0, color="#999", lw=1)
+        markerline, stemlines, baseline = plt.stem(sub["滞后L"], sub["相关系数"], linefmt="C0-", markerfmt="C0o", basefmt="C7-")
+        try:
+            plt.setp(stemlines, linewidth=1.5)
+        except Exception:
+            pass
+        plt.title(f"{label_prefix}：{var} 与排放的领先-滞后相关")
+        plt.xlabel("滞后 L（正值表示X领先排放L年）")
+        plt.ylabel("相关系数")
+        plt.tight_layout()
+        plt.savefig(OUTPUT_DIR / f"{out_prefix}_leadlag_{var}.png", dpi=200)
+        plt.close()
+
+
+def pairplot_levels(df: pd.DataFrame, cols_map: dict, title: str, out_png: Path):
+    ensure_chinese_font()
+    sub = df[list(cols_map.keys())].rename(columns=cols_map).copy()
+    g = sns.pairplot(sub, diag_kind="kde")
+    plt.suptitle(title, y=1.02)
+    plt.tight_layout()
+    g.savefig(out_png, dpi=200)
+    plt.close()
+
+
+def residualized_scatter(df: pd.DataFrame, y_col: str, x_col: str, label_prefix: str, out_png: Path):
+    ensure_chinese_font()
+    d = df.copy().sort_values("year")
+    # 对数并去趋势
+    for col in [y_col, x_col]:
+        d[f"ln_{col}"] = safe_log(d[col])
+        X = sm.add_constant(pd.Series(np.arange(len(d))+1, name="trend"))
+        res = sm.OLS(d[f"ln_{col}"], X).fit()
+        d[col+"_res"] = d[f"ln_{col}"] - res.fittedvalues
+    plt.figure(figsize=(5,4))
+    sns.regplot(x=d[x_col+"_res"], y=d[y_col+"_res"], marker="o")
+    plt.title(f"{label_prefix}：去趋势后残差散点（{x_col} vs {y_col}）")
+    plt.xlabel(f"{x_col}（去趋势残差）")
+    plt.ylabel(f"{y_col}（去趋势残差）")
+    plt.tight_layout()
+    plt.savefig(out_png, dpi=200)
+    plt.close()
+
+
+def preliminary_association_analysis(merged_gba: pd.DataFrame, merged_gd: pd.DataFrame):
+    """两者关联性初步分析：
+    - 水平/差分/去趋势相关性（Pearson/Spearman）
+    - 领先-滞后相关性（-2..+2）与折线图
+    - 水平散点矩阵（pairplot）
+    - 去趋势残差散点（示例：光伏/风电）
+    """
+    x_cols = ["pv_gw", "wind_gw", "nev_10k_units", "storage_mw"]
+    # 九市
+    if not merged_gba.empty:
+        corr_tbl = correlation_table_levels_diffs_detrend(merged_gba, "emission_gba", x_cols, "九市")
+        corr_tbl.to_csv(OUTPUT_DIR / "关联性_相关性表_九市.csv", index=False)
+        # 领先滞后
+        ccf = lead_lag_cross_corr(merged_gba, "emission_gba", x_cols, "九市")
+        ccf.to_csv(OUTPUT_DIR / "关联性_领先滞后相关_九市.csv", index=False)
+        plot_lead_lag(ccf, "九市", "九市")
+        # Pairplot（水平）
+        cols_map = {
+            "emission_gba": "九市碳排放",
+            "pv_gw": "光伏装机(GW)",
+            "wind_gw": "风电装机(GW)",
+            "nev_10k_units": "NEV(万辆)",
+            "storage_mw": "储能(MW)",
+        }
+        pairplot_levels(merged_gba, cols_map, "九市：新能源与碳排放的散点矩阵", OUTPUT_DIR / "图_散点矩阵_九市.png")
+        # 去趋势残差散点（示例）
+        residualized_scatter(merged_gba, "emission_gba", "pv_gw", "九市", OUTPUT_DIR / "图_去趋势残差散点_九市_pv.png")
+        residualized_scatter(merged_gba, "emission_gba", "wind_gw", "九市", OUTPUT_DIR / "图_去趋势残差散点_九市_wind.png")
+
+    # 广东
+    if not merged_gd.empty:
+        corr_tbl = correlation_table_levels_diffs_detrend(merged_gd, "emission_guangdong", x_cols, "广东")
+        corr_tbl.to_csv(OUTPUT_DIR / "关联性_相关性表_广东.csv", index=False)
+        ccf = lead_lag_cross_corr(merged_gd, "emission_guangdong", x_cols, "广东")
+        ccf.to_csv(OUTPUT_DIR / "关联性_领先滞后相关_广东.csv", index=False)
+        plot_lead_lag(ccf, "广东", "广东")
+        cols_map = {
+            "emission_guangdong": "广东碳排放",
+            "pv_gw": "光伏装机(GW)",
+            "wind_gw": "风电装机(GW)",
+            "nev_10k_units": "NEV(万辆)",
+            "storage_mw": "储能(MW)",
+        }
+        pairplot_levels(merged_gd, cols_map, "广东：新能源与碳排放的散点矩阵", OUTPUT_DIR / "图_散点矩阵_广东.png")
+        residualized_scatter(merged_gd, "emission_guangdong", "pv_gw", "广东", OUTPUT_DIR / "图_去趋势残差散点_广东_pv.png")
+        residualized_scatter(merged_gd, "emission_guangdong", "wind_gw", "广东", OUTPUT_DIR / "图_去趋势残差散点_广东_wind.png")
+
+    # Word 汇总
+    doc = Document()
+    doc.add_heading("新能源与碳排放关联性初步分析", level=1)
+    for name in ["关联性_相关性表_九市.csv", "关联性_相关性表_广东.csv", "关联性_领先滞后相关_九市.csv", "关联性_领先滞后相关_广东.csv"]:
+        p = OUTPUT_DIR / name
+        if p.exists():
+            df = pd.read_csv(p)
+            doc.add_heading(p.stem, level=2)
+            # 简化导入前10行
+            head = df.head(10)
+            tbl = doc.add_table(rows=1, cols=len(head.columns))
+            for j, c in enumerate(head.columns):
+                tbl.rows[0].cells[j].text = str(c)
+            for _, r in head.iterrows():
+                row = tbl.add_row().cells
+                for j, c in enumerate(head.columns):
+                    row[j].text = str(r[c])
+    doc.save(OUTPUT_DIR / "关联性初步分析_结果汇总.docx")
+
+
 # ------------------------ 主流程 ------------------------
 
 def main():
@@ -548,6 +726,9 @@ def main():
 
     # 图表与Word表格
     plot_and_export(df_gba_year, df_nei, merged_gba, panel, outputs)
+
+    # 4.3 两者关联性初步分析
+    preliminary_association_analysis(merged_gba, merged_gd)
 
     print("已保存输出至:", OUTPUT_DIR)
 
